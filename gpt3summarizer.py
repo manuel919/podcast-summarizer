@@ -1,15 +1,19 @@
 import os
 from dotenv import load_dotenv
-import openai
+from openai import OpenAI
 import tiktoken
 
 class GPT3Summarizer:
     def __init__(self, api_key, model_engine = "gpt-3.5-turbo", max_tokens = 4096):
         load_dotenv()
-        openai.api_key = api_key
+        self.client = OpenAI(api_key=api_key)
         self.model_engine = model_engine
         self.max_tokens = max_tokens
-        self.openai_price = float(os.getenv("OPENAI_PRICING_CHAT")) if model_engine == "gpt-3.5-turbo" else float(os.getenv("OPENAI_PRICING_TEXT"))
+        self.openai_price = (
+            float(os.getenv("OPENAI_PRICING_CHAT"))
+            if model_engine == "gpt-3.5-turbo"
+            else float(os.getenv("OPENAI_PRICING_TEXT"))
+        )
         
     def num_tokens_from_string(self, string: str, encoding_name: str) -> int:
         # Returns the number of tokens in a text string
@@ -20,30 +24,34 @@ class GPT3Summarizer:
     def process_gpt3(self, prompt):
         # Process a prompt with GPT-3
         if self.model_engine == "davinci":
-            response = openai.Completion.create(
-                engine='text-davinci-003',
+            response = self.client.completions.create(
+                model="text-davinci-003",
                 prompt=prompt,
+                max_tokens=self.max_tokens,
                 n=1,
                 stop=None,
                 temperature=0.7,
             )
-            
+
             choices = response.choices
             if choices:
                 content = choices[0].text.strip()
                 total_tokens = response.usage.total_tokens
-                return content
+                return content, total_tokens
             else:
                 print(response)
                 Exception("No choices returned from GPT-3 API using model 'text-davinci-003'")
-                
+
         elif self.model_engine == "gpt-3.5-turbo":
-            response = openai.ChatCompletion.create(
+            response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                        {"role": "system", "content": "You are an AI assistant that summarizes podcasts"},
-                        {"role": "user", "content": prompt},
-                    ]
+                    {
+                        "role": "system",
+                        "content": "You are an AI assistant that summarizes podcasts",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
             )
             choices = response.choices
             if choices:
