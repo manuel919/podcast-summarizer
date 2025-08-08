@@ -37,17 +37,19 @@ class WhisperTranscriber:
             audio = AudioSegment.from_mp3(audio_path)
 
             # PyDub handles time in milliseconds
-            chunk = 25 * 60 * 1000
-            
+            chunk_length_ms = 25 * 60 * 1000
+
             # split the audio file into ~25 minute chunks
-            for i, chunk in enumerate(audio[::chunk]):
-                chunk_name = f"downloads/whisper/{file_name.split('.')[0]}_{i}.mp3"
+            for i in range(0, len(audio), chunk_length_ms):
+                chunk_name = f"downloads/whisper/{file_name.split('.')[0]}_{i // chunk_length_ms}.mp3"
 
                 if os.path.exists(chunk_name):
-                    pass
-                
+                    audio_list.append(chunk_name)
+                    continue
+
+                audio_chunk = audio[i:i + chunk_length_ms]
+                audio_chunk.export(chunk_name, format="mp3")
                 audio_list.append(chunk_name)
-                chunk.export(chunk_name, format="mp3")
                 
         else:
             audio_list.append(audio_path)
@@ -87,7 +89,7 @@ class WhisperTranscriber:
                 with open(transcript_path, "w") as f:
                     f.write(transcript)
                     transcriptions.append(transcript)
-                    print(f"\t\t↪ saved transcript to {audio.split('.')[0]}.txt (words: {len(transcript.split())}")
+                    print(f"\t\t↪ saved transcript to {audio.split('.')[0]}.txt (words: {len(transcript.split())})")
             else:
                 # Load the transcript from the text file
                 with open(transcript_path, "r") as f:
